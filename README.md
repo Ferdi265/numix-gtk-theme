@@ -66,12 +66,19 @@ make
 sudo make install
 ```
 
-To set the theme in GNOME, run the following commands in Terminal,
+To set the theme in GNOME.
+
+Run the following commands in Terminal,
 
 ```sh
 gsettings set org.gnome.desktop.interface gtk-theme "Numix"
 gsettings set org.gnome.desktop.wm.preferences theme "Numix"
 ```
+Or install GNOME Tweak Tool, by running the following command in Terminal,
+```sh
+sudo apt install gnome-tweak-tool
+```
+
 
 To set the theme in Xfce, run the following commands in Terminal,
 
