@@ -1,8 +1,8 @@
-#! /bin/bash
+#!/bin/bash
 
 detect_inkscape_version() {
     echo "render-assets: checking inkscape version"
-    INKSCAPE_VERSION="$(inkscape --version |& head -n1 | cut -d\  -f2)"
+    INKSCAPE_VERSION="$(inkscape --version 2>/dev/null | head -n1 | cut -d\  -f2)"
     INKSCAPE_VERSION_MAJOR="$(cut -d. -f1 <<< "$INKSCAPE_VERSION")"
     INKSCAPE_VERSION_MINOR="$(cut -d. -f2 <<< "$INKSCAPE_VERSION")"
     INKSCAPE_VERSION_PATCH="$(cut -d. -f3 <<< "$INKSCAPE_VERSION")"
@@ -31,10 +31,29 @@ inkscape_render() {
     case "$INKSCAPE_FLAVOUR" in
         1.x) inkscape --export-type=png --export-filename="$FILE" "$@";;
         0.9x) inkscape --export-png="$FILE" "$@";;
-        *) echo "render-assets.sh: unknown inkscape flavour '$INKSCAPE_FLAVOUR'";;
+        *) echo "render-assets: unknown inkscape flavour '$INKSCAPE_FLAVOUR'";;
     esac
 }
 
+print_header() {
+    printf "render-assets: $THEMENAME [% 3d / % 3d ]:" "$CUR" "$TOTAL"
+}
+
+if [[ $# -eq 1 ]]; then
+    THEMENAME="$1"
+    HEADER="render-assets: $THEMENAME"
+else
+    echo "render-assets: invalid arguments"
+    echo "usage: render-assets.sh [THEMENAME]"
+    exit 1
+fi
+
+if [[ "$ASSETS_QUIET" -eq 1 ]]; then
+    INKSCAPE_ERR_TMP="$(mktemp --suffix=.inkscape.log)"
+    INKSCAPE_REDIR="$INKSCAPE_ERR_TMP"
+else
+    INKSCAPE_REDIR="/dev/stderr"
+fi
 
 SRC_FILE="src/assets/all-assets.svg"
 ASSETS_DIR="src/assets"
@@ -42,28 +61,25 @@ INDEX="src/assets/all-assets.txt"
 
 detect_inkscape_version
 
-for i in `cat $INDEX`
-do 
-if [ -f $ASSETS_DIR/$i.png ]; then
-    echo $ASSETS_DIR/$i.png exists.
-else
-    echo Rendering $ASSETS_DIR/$i.png
-    inkscape_render "$ASSETS_DIR/$i.png" \
-              --export-id=$i \
+TOTAL=$((2 * $(wc -l < "$INDEX")))
+CUR=1
+for f in $(cat "$INDEX"); do
+    echo "$(print_header) rendering $ASSETS_DIR/$f.png"; CUR=$((CUR + 1))
+    inkscape_render "$ASSETS_DIR/$f.png" \
+              --export-id=$f \
               --export-id-only \
-              $SRC_FILE >/dev/null #\
-    # && optipng -o7 --quiet $ASSETS_DIR/$i.png 
-fi
-if [ -f $ASSETS_DIR/$i@2.png ]; then
-    echo $ASSETS_DIR/$i@2.png exists.
-else
-    echo Rendering $ASSETS_DIR/$i@2.png
-    inkscape_render "$ASSETS_DIR/$i@2.png" \
+              $SRC_FILE >/dev/null 2>"$INKSCAPE_REDIR"
+    [[ $? -ne 0 && -n "$INKSCAPE_ERR_TMP" ]] && sed 's/^/error: /' "$INKSCAPE_ERR_TMP"
+
+    echo "$(print_header) rendering $ASSETS_DIR/$f@2.png"; CUR=$((CUR + 1))
+    inkscape_render "$ASSETS_DIR/$f@2.png" \
               --export-id=$i \
               --export-dpi=180 \
               --export-id-only \
-              $SRC_FILE >/dev/null #\
-    # && optipng -o7 --quiet $ASSETS_DIR/$i@2.png 
-fi
+              $SRC_FILE >/dev/null 2>"$INKSCAPE_REDIR"
+    [[ $? -ne 0 && -n "$INKSCAPE_ERR_TMP" ]] && sed 's/^/error: /' "$INKSCAPE_ERR_TMP"
 done
+
+[[ -n "$INKSCAPE_ERR_TMP" ]] && rm -f "$INKSCAPE_ERR_TMP"
+
 exit 0

@@ -15,13 +15,15 @@ PATCH=scripts/patch.sh
 THEME=Standard
 INSTALL_DIR=$(DESTDIR)/usr/share/themes/Numix$(THEME)
 
+ASSETS_QUIET=1
+
 all: clean gresource
 
 preprocess:
 	$(PATCH) patch "$(THEME).colors"
 
 assets: preprocess
-	$(ASSETS)
+	ASSETS_QUIET=$(ASSETS_QUIET) $(ASSETS) $(THEME)
 
 css: preprocess assets
 	mkdir $(DIST_DIR)
