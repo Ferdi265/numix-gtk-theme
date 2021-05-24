@@ -20,7 +20,7 @@ ASSETS_QUIET=1
 all: clean gresource
 
 preprocess:
-	$(PATCH) patch "$(THEME).colors"
+	$(PATCH) patch "colors/$(THEME).colors"
 
 assets: preprocess
 	ASSETS_QUIET=$(ASSETS_QUIET) $(ASSETS) $(THEME)
